@@ -1,0 +1,10 @@
+# AP2 service dependencies.
+# The official Google AP2 SDK is installed from its Git repository because it is
+# not published to PyPI (package name: ap2, version 0.1). Pinned to a commit-ish
+# ref via the setup script; see README.md in this folder.
+fastapi==0.115.5
+uvicorn==0.32.1
+pydantic==2.12.5
+
+# Official AP2 SDK (installed separately from the cloned repo, see setup).
+# ap2 @ git+https://github.com/google-agentic-commerce/AP2.git
