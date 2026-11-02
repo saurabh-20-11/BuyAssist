@@ -1,10 +1,12 @@
 package ai.buyassist.jev;
 
+import ai.buyassist.decision.DecisionProvider;
 import ai.buyassist.jev.wire.JevApiRequest;
 import ai.buyassist.jev.wire.JevApiResponse;
 import ai.buyassist.procurement.Candidate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -30,7 +32,8 @@ import java.util.Map;
  * </ul>
  */
 @Service
-public class JevDecisionService {
+@ConditionalOnProperty(name = "decision.provider", havingValue = "jev")
+public class JevDecisionService implements DecisionProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JevDecisionService.class);
 
@@ -45,6 +48,12 @@ public class JevDecisionService {
         this.props = props;
     }
 
+    @Override
+    public String providerName() {
+        return "jev:" + props.model();
+    }
+
+    @Override
     public JevDecisionResult decide(JevDecisionRequest request) {
         if (!props.isConfigured() || request.policyValidCandidates().isEmpty()) {
             return JevDecisionResult.unavailable();

@@ -4,6 +4,20 @@ server:
 spring:
   application:
     name: buyassist-backend
+  config:
+    # Load local secrets from the project-root .env if present (git-ignored).
+    import: "optional:file:../.env[.properties]"
+
+# Bounded decision layer: "gemini" (default, free) or "jev" (calibrated, paid).
+decision:
+  provider: ${DECISION_PROVIDER:gemini}
+
+# Gemini / Google Gen AI (server-side only). Serves the conversational layer and,
+# when decision.provider=gemini, the bounded decision layer via structured output.
+gemini:
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.5-flash}
 
 # Jev / TypeSafe AI decision layer (server-side only).
 # The API key comes from the environment and is NEVER exposed to the Android app.
