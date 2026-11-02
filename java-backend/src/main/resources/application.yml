@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: buyassist-backend
+
+# Jev / TypeSafe AI decision layer (server-side only).
+# The API key comes from the environment and is NEVER exposed to the Android app.
+jev:
+  base-url: ${JEV_BASE_URL:https://api.typesafe.ai}
+  api-key: ${TYPESAFE_API_KEY:}
+  model: ${JEV_MODEL:jev-1.13.0}
+  # Confidence / review thresholds owned by the policy engine (not the model).
+  thresholds:
+    best-match-confidence: 0.80
+    match-quality-min-index: 2        # 0=poor,1=acceptable,2=good,3=excellent
+    needs-clarification: 0.50
+    needs-human-review: 0.40
+
+# AP2 service (Python, official SDK) reachable over internal REST.
+ap2:
+  base-url: ${AP2_SERVICE_URL:http://localhost:8081}
+
+# Deterministic scoring weights (must sum to 1.0).
+scoring:
+  weights:
+    price: 0.35
+    feature-match: 0.25
+    warranty: 0.20
+    delivery: 0.10
+    reliability: 0.10
