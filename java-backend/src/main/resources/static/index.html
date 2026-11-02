@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BuyAssist — Procurement Console</title>
+<style>
+  :root {
+    --bg: #0f1420; --panel: #1a2232; --panel2: #141b29; --line: #2a3448;
+    --text: #e6ebf5; --muted: #8a97b1; --accent: #5b8cff; --good: #3ecf8e;
+    --bad: #ff6b6b; --warn: #ffb454;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, Segoe UI, Roboto, sans-serif; }
+  header { padding: 20px 28px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
+  header .tag { color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: 360px 1fr; gap: 0;
+    min-height: calc(100vh - 62px); }
+  .form { padding: 24px 28px; border-right: 1px solid var(--line); }
+  .results { padding: 24px 28px; overflow: auto; }
+  label { display: block; font-size: 13px; color: var(--muted);
+    margin: 14px 0 5px; }
+  input, textarea { width: 100%; background: var(--panel2);
+    border: 1px solid var(--line); color: var(--text); border-radius: 8px;
+    padding: 9px 11px; font-size: 14px; }
+  textarea { resize: vertical; min-height: 56px; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip { padding: 6px 12px; border: 1px solid var(--line); border-radius: 20px;
+    cursor: pointer; font-size: 13px; background: var(--panel2); user-select: none; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.go { margin-top: 20px; width: 100%; background: var(--accent);
+    color: #fff; border: none; border-radius: 9px; padding: 12px; font-size: 15px;
+    font-weight: 600; cursor: pointer; }
+  button.go:disabled { opacity: .55; cursor: wait; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  .winner { color: var(--good); font-weight: 700; }
+  .score { font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 12px;
+    font-size: 12px; font-weight: 600; }
+  .pill.pass { background: rgba(62,207,142,.15); color: var(--good); }
+  .pill.fail { background: rgba(255,107,107,.15); color: var(--bad); }
+  .kv { display: grid; grid-template-columns: 200px 1fr; gap: 6px 14px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .bar { height: 7px; background: var(--panel2); border-radius: 4px;
+    overflow: hidden; margin-top: 3px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .muted { color: var(--muted); }
+  .rejected td { opacity: .5; }
+  .agree { color: var(--good); } .disagree { color: var(--warn); }
+  .err { color: var(--bad); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BuyAssist</h1>
+  <span class="tag">Procurement Console — scoring · policy gate · AI decision</span>
+</header>
+<main>
+  <section class="form">
+    <label>What do you need?</label>
+    <textarea id="product">27 inch monitor</textarea>
+
+    <div class="row">
+      <div><label>Quantity</label><input id="quantity" type="number" value="5" min="1" /></div>
+      <div><label>Budget (total $)</label><input id="budget" type="number" value="1200" /></div>
+    </div>
+    <div class="row">
+      <div><label>Size (inches, 0=any)</label><input id="size" type="number" value="27" /></div>
+      <div><label>Min warranty (years)</label><input id="warranty" type="number" value="3" min="0" /></div>
+    </div>
+
+    <label>Required features</label>
+    <div class="chips" id="features">
+      <span class="chip on" data-f="USB-C">USB-C</span>
+      <span class="chip" data-f="HDMI">HDMI</span>
+      <span class="chip" data-f="DP">DP</span>
+      <span class="chip" data-f="4K">4K</span>
+      <span class="chip" data-f="IPS">IPS</span>
+    </div>
+
+    <label>Notes (nuance for the AI decision layer)</label>
+    <textarea id="notes">for the analytics team</textarea>
+    <div class="hint">Hard rules are enforced in code. Notes only influence the AI's semantic judgment.</div>
+
+    <button class="go" id="go">Evaluate</button>
+  </section>
+
+  <section class="results" id="results">
+    <div class="card"><span class="muted">Set your constraints and hit Evaluate. You'll see the
+      deterministic scores, every hard-constraint check, and the AI decision trace.</span></div>
+  </section>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('#features .chip').forEach(c =>
+    c.addEventListener('click', () => c.classList.toggle('on')));
+
+  $('go').addEventListener('click', run);
+
+  async function run() {
+    const btn = $('go'); btn.disabled = true; btn.textContent = 'Evaluating…';
+    const features = [...document.querySelectorAll('#features .chip.on')].map(c => c.dataset.f);
+    const body = {
+      product: $('product').value,
+      quantity: +$('quantity').value,
+      budget: +$('budget').value,
+      sizeInches: +$('size').value,
+      requiredFeatures: features,
+      minimumWarrantyYears: +$('warranty').value,
+      notes: $('notes').value,
+      allowedMerchants: []
+    };
+    try {
+      const res = await fetch('/api/procurement/evaluate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+      render(await res.json());
+    } catch (e) {
+      $('results').innerHTML = '<div class="card err">Error: ' + e.message + '</div>';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Evaluate';
+    }
+  }
+
+  function render(t) {
+    const d = t.decision;
+    const top = t.deterministicTop;
+    const valid = t.ranked || [];
+    const rejected = (t.evaluations || []).filter(e => !e.policyValid);
+
+    // Ranked (policy-valid) table
+    let rankRows = valid.map((s, i) => {
+      const name = s.candidate.name, win = name === top;
+      return `<tr>
+        <td>${i + 1}</td>
+        <td class="${win ? 'winner' : ''}">${name}${win ? ' ★' : ''}</td>
+        <td>${s.candidate.merchant}</td>
+        <td class="score">$${s.candidate.unitPrice} × ${s.candidate.quantity} = $${(s.candidate.unitPrice*s.candidate.quantity).toFixed(0)}</td>
+        <td>${s.candidate.warrantyYears}y</td>
+        <td class="score">${s.total.toFixed(1)}
+          <div class="bar"><i style="width:${s.total}%"></i></div></td>
+      </tr>`;
+    }).join('');
+    if (!rankRows) rankRows = '<tr><td colspan="6" class="muted">No candidate passed every hard constraint.</td></tr>';
+
+    // Rejected table
+    let rejRows = rejected.map(e => {
+      const failed = e.checks.filter(c => !c.passed).map(c => c.name + ' (' + c.detail + ')').join('; ');
+      return `<tr class="rejected"><td>${e.candidate.name}</td><td>${e.candidate.merchant}</td>
+        <td class="err">${failed}</td></tr>`;
+    }).join('');
+
+    // AI decision
+    const avail = d.answeringModel !== 'unavailable';
+    const agree = top && d.bestMatchChoice &&
+      top.toLowerCase() === d.bestMatchChoice.toLowerCase();
+    const qLabel = d.matchQualityLegend[Math.round(d.matchQualityIndex)] || '—';
+
+    const decisionCard = avail ? `
+      <div class="kv">
+        <div>Best semantic match</div><div><b>${d.bestMatchChoice}</b>
+          <span class="${agree ? 'agree' : 'disagree'}">
+          (${agree ? 'agrees with deterministic #1' : 'differs from deterministic #1'})</span></div>
+        <div>Match confidence</div><div>${(d.bestMatchConfidence*100).toFixed(0)}%
+          <div class="bar"><i style="width:${d.bestMatchConfidence*100}%"></i></div></div>
+        <div>Match quality</div><div>${qLabel} (${(d.matchQualityConfidence*100).toFixed(0)}% conf)</div>
+        <div>Needs clarification</div><div>${(d.needsClarification*100).toFixed(0)}%</div>
+        <div>Needs human review</div><div>${(d.needsHumanReview*100).toFixed(0)}%</div>
+        <div>Model</div><div class="muted">${d.answeringModel}</div>
+      </div>` :
+      `<span class="muted">Decision layer returned <b>unavailable</b> (model overloaded or key
+       not set). The deterministic pipeline still produced a winner above — that's the graceful
+       fallback working as designed.</span>`;
+
+    $('results').innerHTML = `
+      <div class="card">
+        <h2>Recommended</h2>
+        ${top ? `<div style="font-size:20px"><b class="winner">${top}</b></div>` :
+          '<div class="err">No valid option within constraints.</div>'}
+      </div>
+      <div class="card">
+        <h2>Deterministic ranking (policy-valid)</h2>
+        <table><thead><tr><th>#</th><th>Option</th><th>Merchant</th>
+          <th>Price</th><th>Warr.</th><th>Score</th></tr></thead>
+          <tbody>${rankRows}</tbody></table>
+      </div>
+      ${rejRows ? `<div class="card"><h2>Rejected by hard rules</h2>
+        <table><thead><tr><th>Option</th><th>Merchant</th><th>Failed constraint</th></tr></thead>
+        <tbody>${rejRows}</tbody></table></div>` : ''}
+      <div class="card">
+        <h2>AI decision layer (${t.decisionProvider})</h2>
+        ${decisionCard}
+      </div>`;
+  }
+</script>
+</body>
+</html>
