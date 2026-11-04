@@ -17,6 +17,7 @@ import java.util.List;
  * @param deterministicTop   name of the deterministic #1 (the actual winner), or null
  * @param decisionProvider   which bounded decision model answered (audit)
  * @param decision           the bounded decision-layer result (advisory)
+ * @param correlationId      links this evaluation to its audit timeline
  */
 public record DecisionTrace(
         ProcurementIntent intent,
@@ -24,7 +25,8 @@ public record DecisionTrace(
         List<ScoredCandidate> ranked,
         String deterministicTop,
         String decisionProvider,
-        JevDecisionResult decision
+        JevDecisionResult decision,
+        String correlationId
 ) {
     /** True when the deterministic winner and the decision layer's pick agree. */
     public boolean decisionAgreesWithDeterministic() {

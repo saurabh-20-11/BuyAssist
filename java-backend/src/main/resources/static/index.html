@@ -78,6 +78,13 @@
   .receipt { margin-top: 14px; border: 1px solid var(--good); border-radius: 10px;
     padding: 14px 16px; background: rgba(62,207,142,.06); }
   .receipt-h { color: var(--good); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
+  .tl-row { display: grid; grid-template-columns: 90px 90px 190px 1fr; gap: 10px;
+    padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center; }
+  .tl-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tl-layer { text-align: center; border-radius: 10px; padding: 2px 6px; font-weight: 600;
+    font-size: 11px; text-transform: uppercase; }
+  .tl-stage { font-weight: 600; }
+  .tl-detail { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -310,7 +317,8 @@
       if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
       const r = await res.json();
       const rc = r.receipt;
-      document.getElementById('receiptArea').innerHTML = r.authorized && rc ? `
+      const corr = r.correlationId || ts.correlationId;
+      document.getElementById('receiptArea').innerHTML = (r.authorized && rc ? `
         <div class="receipt">
           <div class="receipt-h">✓ RECEIPT</div>
           <div class="kv">
@@ -320,11 +328,43 @@
             <div>Method</div><div>${rc.method}</div>
             <div>Status</div><div class="agree">${rc.status}</div>
           </div></div>` :
-        `<div class="err" style="margin-top:10px">${r.status}: ${r.detail}</div>`;
+        `<div class="err" style="margin-top:10px">${r.status}: ${r.detail}</div>`) +
+        `<button class="go" id="traceBtn" style="margin-top:12px">View audit timeline</button>
+         <div id="traceArea"></div>`;
+      document.getElementById('traceBtn').addEventListener('click', () => loadTimeline(corr));
     } catch (e) {
       document.getElementById('receiptArea').innerHTML =
         '<div class="err" style="margin-top:10px">Error: ' + e.message + '</div>';
       btn.disabled = false; btn.textContent = 'AUTHORIZE';
+    }
+  }
+
+  const LAYER_COLOR = { input: '#8a97b1', analytics: '#5b8cff', decision: '#ffb454',
+    policy: '#3ecf8e', ap2: '#c678dd' };
+
+  async function loadTimeline(correlationId) {
+    const area = document.getElementById('traceArea');
+    if (!correlationId) { area.innerHTML = '<div class="muted">No correlation id.</div>'; return; }
+    try {
+      const res = await fetch('/api/audit/' + encodeURIComponent(correlationId));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const events = await res.json();
+      const rows = events.map(e => {
+        const t = new Date(e.timestamp).toLocaleTimeString();
+        const col = LAYER_COLOR[e.layer] || '#8a97b1';
+        return `<div class="tl-row">
+          <span class="tl-time">${t}</span>
+          <span class="tl-layer" style="background:${col}22;color:${col}">${e.layer}</span>
+          <span class="tl-stage">${e.stage}</span>
+          <span class="tl-detail">${e.detail}</span></div>`;
+      }).join('');
+      area.innerHTML = `<div class="card" style="margin-top:12px">
+        <h2>Audit timeline — ${correlationId}</h2>
+        <div class="muted" style="margin-bottom:8px">Layer legend: input · analytics ·
+          decision · policy · ap2 — showing which part of the architecture produced each step.</div>
+        ${rows}</div>`;
+    } catch (e) {
+      area.innerHTML = '<div class="err" style="margin-top:10px">Timeline error: ' + e.message + '</div>';
     }
   }
 </script>
