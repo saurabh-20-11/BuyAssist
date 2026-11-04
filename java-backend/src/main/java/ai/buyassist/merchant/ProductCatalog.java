@@ -96,4 +96,20 @@ public class ProductCatalog {
     public void save(Product product) {
         products.put(product.id(), product);
     }
+
+    /**
+     * Set a new unit price for a product (pricing simulator for the autonomous
+     * demo). Returns the updated product, or empty if the id is unknown.
+     */
+    public Optional<Product> setPrice(String id, double newUnitPrice) {
+        Product p = products.get(id);
+        if (p == null) {
+            return Optional.empty();
+        }
+        Product updated = new Product(p.id(), p.merchant(), p.brand(), p.name(),
+                p.category(), p.sizeInches(), newUnitPrice, p.features(),
+                p.warrantyYears(), p.deliveryDays(), p.reliability());
+        products.put(id, updated);
+        return Optional.of(updated);
+    }
 }

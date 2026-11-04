@@ -89,3 +89,40 @@ Exposed to the Java backend over internal REST:
 10:31:34 Payment simulated (Authorized)
 10:31:35 Receipt created
 ```
+
+## Implemented backend endpoints (as built)
+
+The backend (Spring Boot, port 8080) calls the Python AP2 service (port 8081).
+These are the actual HTTP endpoints wired up:
+
+### Procurement + human-present authorization
+- `POST /api/procurement/evaluate` — runs scoring → policy gate → decision layer,
+  returns the DecisionTrace (incl. a `correlationId`).
+- `POST /api/authorization/prepare` — builds the deterministic Trusted Surface for
+  a chosen product (server recomputes all amounts from the catalog, re-checks every
+  hard constraint) and creates the AP2 CartMandate. The client sends the product id
+  and intent constraints; it never sends prices.
+- `POST /api/authorization/authorize` — the ONLY payment-authorizing action:
+  re-checks policy, creates + verifies the PaymentMandate, runs simulated payment,
+  returns the receipt. A tampered request (e.g. lowered budget) is refused by the
+  server-side policy re-check before any payment.
+
+### Audit
+- `GET /api/audit/{correlationId}` — the ordered, layer-tagged timeline
+  (input / analytics / decision / policy / ap2).
+
+### Autonomous (human-not-present)
+- `POST /api/autonomous/mandate` — creates an open mandate + AP2 IntentMandate
+  (inactive until authorized).
+- `POST /api/autonomous/mandate/{id}/authorize` — user explicitly activates it.
+- `POST /api/autonomous/simulate-price-drop` — pricing simulator for the demo.
+- `POST /api/autonomous/mandate/{id}/evaluate` — the gated check:
+  deterministic hard gate → decision layer → review/confidence gate (FAIL-SAFE:
+  unavailable or low-confidence → escalate, never auto-buy) → AP2 verifies the
+  stored IntentMandate → checkout/payment mandates → simulated payment → receipt.
+
+### Verified fail-safe
+With the decision layer unavailable (verified by running with `decision.provider=jev`
+and no key), an autonomous check with a qualifying offer **escalates** rather than
+purchasing. A purchase requires: hard gate pass AND decision gate clear AND AP2
+IntentMandate verification. The model can block or clear, never authorize.
