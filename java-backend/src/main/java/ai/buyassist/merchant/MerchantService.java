@@ -36,6 +36,15 @@ public class MerchantService {
                 .toList();
     }
 
+    /**
+     * Rebuild a candidate authoritatively from the catalog by product id at the
+     * requested quantity. Used by the authorization flow so transaction amounts
+     * come from the server's catalog, never from client-supplied values.
+     */
+    public java.util.Optional<Candidate> candidateById(String productId, int quantity) {
+        return catalog.findById(productId).map(p -> toCandidate(p, quantity));
+    }
+
     private Candidate toCandidate(Product p, int quantity) {
         return new Candidate(
                 p.brand() + " " + p.sizeInches() + "\" (" + p.id() + ")",

@@ -60,6 +60,24 @@
   .agree { color: var(--good); } .disagree { color: var(--warn); }
   .err { color: var(--bad); }
   .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .trusted { margin-top: 16px; border: 2px solid var(--accent); border-radius: 12px;
+    padding: 18px 20px; background: #10182b; }
+  .trusted-h { text-align: center; font-weight: 700; letter-spacing: 2px;
+    border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 12px; }
+  .trusted-row { font-size: 16px; margin-bottom: 6px; }
+  .constraints { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+    color: var(--good); margin: 10px 0; font-size: 14px; }
+  .ap2tag { text-align: center; color: var(--muted); font-size: 13px;
+    margin: 12px 0; letter-spacing: .5px; }
+  .trusted-actions { display: flex; gap: 12px; margin-top: 8px; }
+  .btn-cancel, .btn-auth { flex: 1; padding: 12px; border-radius: 9px; border: none;
+    font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  .btn-auth { background: var(--good); color: #042; }
+  .btn-auth:disabled { opacity: .5; cursor: not-allowed; }
+  .receipt { margin-top: 14px; border: 1px solid var(--good); border-radius: 10px;
+    padding: 14px 16px; background: rgba(62,207,142,.06); }
+  .receipt-h { color: var(--good); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -105,6 +123,7 @@
 
 <script>
   const $ = id => document.getElementById(id);
+  let lastBody = null, lastTrace = null, lastCorrelationId = null;
   document.querySelectorAll('#features .chip').forEach(c =>
     c.addEventListener('click', () => c.classList.toggle('on')));
 
@@ -129,7 +148,10 @@
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
-      render(await res.json());
+      const trace = await res.json();
+      lastBody = body; lastTrace = trace;
+      lastCorrelationId = trace.correlationId || null;
+      render(trace);
     } catch (e) {
       $('results').innerHTML = '<div class="card err">Error: ' + e.message + '</div>';
     } finally {
@@ -205,7 +227,105 @@
       <div class="card">
         <h2>AI decision layer (${t.decisionProvider})</h2>
         ${decisionCard}
+      </div>
+      ${top ? `<div class="card"><h2>Authorize purchase</h2>
+        <div class="muted">The AI recommended ${top}. Authorization is a separate,
+        deterministic step — the AI does not authorize payment.</div>
+        <button class="go" id="prepareBtn">Prepare purchase authorization</button>
+        <div id="authArea"></div></div>` : ''}`;
+
+    if (top) document.getElementById('prepareBtn').addEventListener('click', prepareAuthorization);
+  }
+
+  // Extract the catalog product id embedded in a candidate name "Brand 27\" (id)".
+  function productIdFromName(name) {
+    const m = name && name.match(/\(([^)]+)\)\s*$/);
+    return m ? m[1] : null;
+  }
+
+  function authBody(extra) {
+    return Object.assign({
+      product: lastBody.product, quantity: lastBody.quantity, budget: lastBody.budget,
+      requiredFeatures: lastBody.requiredFeatures,
+      minimumWarrantyYears: lastBody.minimumWarrantyYears, notes: lastBody.notes
+    }, extra);
+  }
+
+  async function prepareAuthorization() {
+    const btn = document.getElementById('prepareBtn');
+    btn.disabled = true; btn.textContent = 'Preparing…';
+    const productId = productIdFromName(lastTrace.deterministicTop);
+    try {
+      const res = await fetch('/api/authorization/prepare', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authBody({ productId, correlationId: lastCorrelationId }))
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+      renderTrustedSurface(await res.json());
+    } catch (e) {
+      document.getElementById('authArea').innerHTML =
+        '<div class="err" style="margin-top:12px">Error: ' + e.message + '</div>';
+      btn.disabled = false; btn.textContent = 'Prepare purchase authorization';
+    }
+  }
+
+  function renderTrustedSurface(ts) {
+    lastCorrelationId = ts.correlationId || lastCorrelationId;
+    const checks = (ts.checks || []).map(c =>
+      `<div>${c.passed ? '✓' : '✗'} ${c.name}</div>`).join('');
+    document.getElementById('authArea').innerHTML = `
+      <div class="trusted">
+        <div class="trusted-h">PURCHASE AUTHORIZATION</div>
+        <div class="trusted-row"><span>${ts.quantity} × ${ts.itemLabel}</span></div>
+        <div class="kv" style="margin:12px 0">
+          <div>Merchant</div><div>${ts.merchant}</div>
+          <div>Unit price</div><div>$${ts.unitPrice.toFixed(2)}</div>
+          <div>Total</div><div><b>$${ts.total.toFixed(2)}</b></div>
+          <div>Cart expiry</div><div class="muted">${ts.cartExpiry || '—'}</div>
+        </div>
+        <div class="constraints">${checks}</div>
+        <div class="ap2tag">🔐 AP2 Mandate · server-computed, not AI-altered</div>
+        <div class="trusted-actions">
+          <button class="btn-cancel" id="cancelBtn">CANCEL</button>
+          <button class="btn-auth" id="authBtn" ${ts.authorizable ? '' : 'disabled'}>AUTHORIZE</button>
+        </div>
+        ${ts.authorizable ? '' : '<div class="err">Not authorizable — a hard constraint fails.</div>'}
+        <div id="receiptArea"></div>
       </div>`;
+    document.getElementById('cancelBtn').addEventListener('click', () =>
+      document.getElementById('authArea').innerHTML = '<div class="muted" style="margin-top:12px">Authorization cancelled.</div>');
+    if (ts.authorizable)
+      document.getElementById('authBtn').addEventListener('click', () => authorizePurchase(ts));
+  }
+
+  async function authorizePurchase(ts) {
+    const btn = document.getElementById('authBtn');
+    btn.disabled = true; btn.textContent = 'Authorizing…';
+    try {
+      const res = await fetch('/api/authorization/authorize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authBody({ productId: ts.productId, cartId: ts.cartId,
+          correlationId: ts.correlationId }))
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+      const r = await res.json();
+      const rc = r.receipt;
+      document.getElementById('receiptArea').innerHTML = r.authorized && rc ? `
+        <div class="receipt">
+          <div class="receipt-h">✓ RECEIPT</div>
+          <div class="kv">
+            <div>Receipt</div><div>${rc.receipt_id}</div>
+            <div>Merchant</div><div>${rc.merchant}</div>
+            <div>Amount</div><div>$${rc.amount.value.toFixed(2)} ${rc.amount.currency}</div>
+            <div>Method</div><div>${rc.method}</div>
+            <div>Status</div><div class="agree">${rc.status}</div>
+          </div></div>` :
+        `<div class="err" style="margin-top:10px">${r.status}: ${r.detail}</div>`;
+    } catch (e) {
+      document.getElementById('receiptArea').innerHTML =
+        '<div class="err" style="margin-top:10px">Error: ' + e.message + '</div>';
+      btn.disabled = false; btn.textContent = 'AUTHORIZE';
+    }
   }
 </script>
 </body>
