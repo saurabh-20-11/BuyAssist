@@ -51,18 +51,27 @@ Vendor selection is never delegated to a single model:
 
 ## Build order (status)
 
-1. ⏳ Monorepo skeleton
-2. ⏳ JDK 21 + Gradle
-3. ⏳ Spring Boot backend
-4. ⏳ Mock merchant/product data
-5. ⏳ Deterministic scoring engine
-6. ⏳ Jev integration layer
-7. ⏳ Python AP2 service (official SDK)
-8. ⏳ Audit / Decision Trace
-9. ⏳ Android voice app scaffold
-10. ⏳ Gemini voice + structured intent
-11. ⏳ Human-Present AP2 flow
-12. ⏳ Human-Not-Present AP2 flow
+1. ✅ Monorepo skeleton
+2. ✅ JDK 21 + Gradle
+3. ✅ Spring Boot backend
+4. ✅ Mock merchant/product data (24 monitors, 3 merchants)
+5. ✅ Deterministic scoring engine
+6. ✅ Decision layer (pluggable: Gemini default, Jev swappable)
+7. ✅ Python AP2 service (official SDK)
+8. ✅ Audit / Decision Trace
+9. ✅ Gemini voice → structured intent (+ browser mic/speech on the web console)
+10. ✅ Human-Present AP2 flow (Trusted Surface authorization)
+11. ✅ Human-Not-Present AP2 flow (autonomous, fail-safe gated)
+12. ⏳ Native Android voice app (optional; web console is fully voice-first today)
+
+### Try it (web console)
+
+1. Start the AP2 service: in `ap2-service/`, `.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8081`
+2. Start the backend: in `java-backend/`, set `JAVA_HOME`, then `java -jar build/libs/buyassist-backend-0.0.1-SNAPSHOT.jar`
+3. Open `http://localhost:8080` in Chrome/Edge. Tap the mic and say a request
+   (e.g. "five 27-inch USB-C monitors under $1,200 with a 3-year warranty"), or
+   type it. The AI extracts the constraints, the pipeline runs, and you can
+   authorize the purchase through the deterministic Trusted Surface.
 
 ## Secrets
 

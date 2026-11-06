@@ -85,6 +85,18 @@
     font-size: 11px; text-transform: uppercase; }
   .tl-stage { font-weight: 600; }
   .tl-detail { color: var(--muted); }
+  .voice { display: flex; gap: 14px; align-items: center; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .mic { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; border: none;
+    background: var(--accent); color: #fff; font-size: 24px; cursor: pointer;
+    transition: transform .1s, background .2s; }
+  .mic:hover { transform: scale(1.05); }
+  .mic.listening { background: var(--bad); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,107,.5); }
+    50% { box-shadow: 0 0 0 10px rgba(255,107,107,0); } }
+  .voice-body { flex: 1; min-width: 0; }
+  .voice-status { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .voice-transcript { font-size: 15px; margin-top: 4px; min-height: 22px; }
 </style>
 </head>
 <body>
@@ -94,6 +106,20 @@
 </header>
 <main>
   <section class="form">
+    <div class="voice">
+      <button class="mic" id="micBtn" title="Tap and speak">🎙️</button>
+      <div class="voice-body">
+        <div class="voice-status" id="voiceStatus">Tap the mic and speak your request</div>
+        <div class="voice-transcript" id="voiceTranscript"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="voiceText" placeholder="…or type a request, e.g. 'five 27 inch USB-C monitors under $1,200 with 3-year warranty'" />
+    </div>
+    <button class="go" id="interpretBtn" style="margin-top:8px;background:var(--panel2);border:1px solid var(--line)">Interpret with AI → fill form</button>
+
+    <hr style="border-color:var(--line);margin:18px 0" />
+
     <label>What do you need?</label>
     <textarea id="product">27 inch monitor</textarea>
 
@@ -143,6 +169,78 @@
     c.addEventListener('click', () => c.classList.toggle('on')));
 
   $('go').addEventListener('click', run);
+
+  // ---- Voice input (Web Speech API) + AI intent extraction ----
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null, listening = false;
+
+  function speak(text) {
+    if (!text || !window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+
+  function setVoiceStatus(s) { $('voiceStatus').textContent = s; }
+
+  $('micBtn').addEventListener('click', () => {
+    if (!SR) {
+      setVoiceStatus('Speech recognition not supported in this browser — try Chrome/Edge, or type below.');
+      return;
+    }
+    if (listening) { recog.stop(); return; }
+    recog = new SR();
+    recog.lang = 'en-US'; recog.interimResults = true; recog.continuous = false;
+    recog.onstart = () => { listening = true; $('micBtn').classList.add('listening'); setVoiceStatus('Listening…'); };
+    recog.onerror = (e) => { setVoiceStatus('Mic error: ' + e.error); };
+    recog.onend = () => {
+      listening = false; $('micBtn').classList.remove('listening');
+      const t = $('voiceTranscript').textContent.trim();
+      if (t) { $('voiceText').value = t; interpret(t); }
+      else setVoiceStatus('Didn\'t catch that — tap the mic and try again.');
+    };
+    recog.onresult = (ev) => {
+      let txt = '';
+      for (const r of ev.results) txt += r[0].transcript;
+      $('voiceTranscript').textContent = txt;
+    };
+    recog.start();
+  });
+
+  $('interpretBtn').addEventListener('click', () => {
+    const t = ($('voiceText').value || $('voiceTranscript').textContent).trim();
+    if (t) interpret(t); else setVoiceStatus('Type or speak a request first.');
+  });
+
+  async function interpret(transcript) {
+    setVoiceStatus('Understanding…');
+    try {
+      const r = await (await fetch('/api/voice/interpret', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript })
+      })).json();
+      if (!r.available) {
+        setVoiceStatus('AI extraction unavailable (model busy) — adjust the form manually.');
+        return;
+      }
+      // Fill the form from the extracted intent.
+      $('product').value = r.product || $('product').value;
+      $('quantity').value = r.quantity || 1;
+      if (r.budget > 0) $('budget').value = r.budget;
+      $('size').value = r.sizeInches || 0;
+      $('warranty').value = r.minimumWarrantyYears || 0;
+      if (r.notes) $('notes').value = r.notes;
+      // Set feature chips.
+      const want = (r.requiredFeatures || []).map(f => f.toUpperCase());
+      document.querySelectorAll('#features .chip').forEach(c =>
+        c.classList.toggle('on', want.includes(c.dataset.f.toUpperCase())));
+      setVoiceStatus('Understood. Review the extracted constraints, then Evaluate.');
+      if (r.confirmation) speak(r.confirmation);
+    } catch (e) {
+      setVoiceStatus('Interpretation error: ' + e.message);
+    }
+  }
 
   async function run() {
     const btn = $('go'); btn.disabled = true; btn.textContent = 'Evaluating…';
@@ -250,6 +348,16 @@
         <div id="authArea"></div></div>` : ''}`;
 
     if (top) document.getElementById('prepareBtn').addEventListener('click', prepareAuthorization);
+
+    // Spoken summary of the recommendation (voice-first loop).
+    if (top && avail) {
+      const q = d.matchQualityLegend[Math.round(d.matchQualityIndex)] || '';
+      const winner = valid[0];
+      const totalTxt = winner ? '$' + (winner.candidate.unitPrice * winner.candidate.quantity).toFixed(0) : '';
+      speak(`I recommend ${top} at ${totalTxt}. Match quality ${q}. Review the authorization to purchase.`);
+    } else if (top) {
+      speak(`My top deterministic choice is ${top}. The AI decision layer was unavailable this time.`);
+    }
   }
 
   // Extract the catalog product id embedded in a candidate name "Brand 27\" (id)".
