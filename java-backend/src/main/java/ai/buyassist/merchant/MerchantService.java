@@ -54,6 +54,9 @@ public class MerchantService {
                 p.warrantyYears(),
                 p.deliveryDays(),
                 p.features(),
-                p.reliability());
+                p.reliability(),
+                p.rating(),
+                p.reviewCount(),
+                p.reviewSummary());
     }
 }

@@ -96,6 +96,9 @@ public class JevDecisionService implements DecisionProvider {
         m.put("warranty_years", c.warrantyYears());
         m.put("delivery_days", c.deliveryDays());
         m.put("features", c.features());
+        m.put("customer_rating", c.rating());
+        m.put("review_count", c.reviewCount());
+        m.put("review_summary", c.reviewSummary());
         return m;
     }
 

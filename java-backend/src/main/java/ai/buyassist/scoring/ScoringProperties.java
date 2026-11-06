@@ -12,6 +12,7 @@ public record ScoringProperties(
         double featureMatch,
         double warranty,
         double delivery,
-        double reliability
+        double reliability,
+        double reviews
 ) {
 }

@@ -281,17 +281,19 @@
     // Ranked (policy-valid) table
     let rankRows = valid.map((s, i) => {
       const name = s.candidate.name, win = name === top;
+      const rating = s.candidate.rating ? '★ ' + s.candidate.rating.toFixed(1) + ' (' + s.candidate.reviewCount + ')' : '—';
       return `<tr>
         <td>${i + 1}</td>
         <td class="${win ? 'winner' : ''}">${name}${win ? ' ★' : ''}</td>
         <td>${s.candidate.merchant}</td>
         <td class="score">$${s.candidate.unitPrice} × ${s.candidate.quantity} = $${(s.candidate.unitPrice*s.candidate.quantity).toFixed(0)}</td>
         <td>${s.candidate.warrantyYears}y</td>
+        <td title="${s.candidate.reviewSummary || ''}">${rating}</td>
         <td class="score">${s.total.toFixed(1)}
           <div class="bar"><i style="width:${s.total}%"></i></div></td>
       </tr>`;
     }).join('');
-    if (!rankRows) rankRows = '<tr><td colspan="6" class="muted">No candidate passed every hard constraint.</td></tr>';
+    if (!rankRows) rankRows = '<tr><td colspan="7" class="muted">No candidate passed every hard constraint.</td></tr>';
 
     // Rejected table
     let rejRows = rejected.map(e => {
@@ -331,7 +333,7 @@
       <div class="card">
         <h2>Deterministic ranking (policy-valid)</h2>
         <table><thead><tr><th>#</th><th>Option</th><th>Merchant</th>
-          <th>Price</th><th>Warr.</th><th>Score</th></tr></thead>
+          <th>Price</th><th>Warr.</th><th>Reviews</th><th>Score</th></tr></thead>
           <tbody>${rankRows}</tbody></table>
       </div>
       ${rejRows ? `<div class="card"><h2>Rejected by hard rules</h2>

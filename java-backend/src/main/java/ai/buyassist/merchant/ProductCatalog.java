@@ -75,7 +75,48 @@ public class ProductCatalog {
                 new Product("bd-lg-32", "BusinessDirect", "LG", "LG 32\" 4K USB-C",
                         "monitor", 32, 379.0, List.of("USB-C", "HDMI", "4K"), 3, 4, 0.92));
 
-        seed.forEach(p -> products.put(p.id(), p));
+        seed.forEach(p -> {
+            Product enriched = enrichWithReviews(p);
+            products.put(enriched.id(), enriched);
+        });
+    }
+
+    /**
+     * Attach realistic mock customer-review data, keyed by brand. Rating and
+     * review count are numeric signals (fed to deterministic scoring); the
+     * summary is a soft signal handed to the AI decision layer. When a real
+     * product API is wired in, this is replaced by the API's review fields.
+     */
+    private Product enrichWithReviews(Product p) {
+        record Review(double rating, int count, String summary) {
+        }
+        java.util.Map<String, Review> byBrand = java.util.Map.ofEntries(
+                java.util.Map.entry("Dell", new Review(4.6, 1840,
+                        "Praised for color accuracy and reliable USB-C docking; occasional reports of minor backlight bleed.")),
+                java.util.Map.entry("HP", new Review(4.3, 1210,
+                        "Solid build and good warranty support; a few note the stand feels flimsy.")),
+                java.util.Map.entry("Lenovo", new Review(4.2, 980,
+                        "Good value and easy setup; some complaints about mediocre speakers.")),
+                java.util.Map.entry("LG", new Review(4.5, 1520,
+                        "Excellent panel quality and ergonomics; pricier than rivals.")),
+                java.util.Map.entry("Samsung", new Review(4.4, 1660,
+                        "Bright, vivid display; firmware/OSD occasionally clunky.")),
+                java.util.Map.entry("Asus", new Review(4.4, 870,
+                        "Great for creative work; a few units had dead-pixel issues on arrival.")),
+                java.util.Map.entry("BenQ", new Review(4.5, 540,
+                        "Loved by designers for color fidelity; limited availability.")),
+                java.util.Map.entry("ViewSonic", new Review(4.0, 610,
+                        "Dependable office monitor; basic design, no frills.")),
+                java.util.Map.entry("AOC", new Review(3.9, 430,
+                        "Budget-friendly and functional; build quality is basic.")),
+                java.util.Map.entry("Acer", new Review(4.0, 520,
+                        "Decent value; some note average contrast.")),
+                java.util.Map.entry("Philips", new Review(4.1, 390,
+                        "Compact and reliable; limited port selection.")));
+        Review r = byBrand.getOrDefault(p.brand(), new Review(4.0, 100, "Generally positive reviews."));
+        return new Product(p.id(), p.merchant(), p.brand(), p.name(), p.category(),
+                p.sizeInches(), p.unitPrice(), p.features(), p.warrantyYears(),
+                p.deliveryDays(), p.reliability(), r.rating(), r.count(), r.summary());
     }
 
     public List<Product> findAll() {
@@ -108,7 +149,8 @@ public class ProductCatalog {
         }
         Product updated = new Product(p.id(), p.merchant(), p.brand(), p.name(),
                 p.category(), p.sizeInches(), newUnitPrice, p.features(),
-                p.warrantyYears(), p.deliveryDays(), p.reliability());
+                p.warrantyYears(), p.deliveryDays(), p.reliability(),
+                p.rating(), p.reviewCount(), p.reviewSummary());
         products.put(id, updated);
         return Optional.of(updated);
     }

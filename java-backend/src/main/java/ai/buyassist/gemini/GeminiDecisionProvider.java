@@ -187,6 +187,9 @@ public class GeminiDecisionProvider implements DecisionProvider {
                 m.put("warranty_years", c.warrantyYears());
                 m.put("delivery_days", c.deliveryDays());
                 m.put("features", c.features());
+                m.put("customer_rating", c.rating());
+                m.put("review_count", c.reviewCount());
+                m.put("review_summary", c.reviewSummary());
                 return m;
             }).toList());
             stateJson = mapper.writeValueAsString(state);
@@ -212,7 +215,11 @@ public class GeminiDecisionProvider implements DecisionProvider {
                   - needs_human_review: probability 0.0-1.0 that this purchase
                     warrants extra human review beyond normal authorization.
 
-                Do not perform arithmetic. Judge only semantic alignment.
+                When judging best_match and match_quality, weigh the customer
+                review signal (customer_rating, review_count, review_summary) as
+                part of semantic fit — e.g. strong reviews reinforce a good match,
+                while a summary noting a relevant defect lowers it. Do not perform
+                arithmetic or recompute averages; judge only semantic alignment.
 
                 PROCUREMENT STATE:
                 %s

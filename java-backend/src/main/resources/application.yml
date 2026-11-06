@@ -39,8 +39,9 @@ ap2:
 # Deterministic scoring weights (must sum to 1.0).
 scoring:
   weights:
-    price: 0.35
+    price: 0.30
     feature-match: 0.25
-    warranty: 0.20
+    warranty: 0.15
     delivery: 0.10
     reliability: 0.10
+    reviews: 0.10

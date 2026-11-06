@@ -55,13 +55,17 @@ public class ScoringEngine {
                     ? 100.0 : clamp0to100(100.0 * c.warrantyYears() / longestWarranty);
             double deliveryScore = normalizeLowerIsBetter(c.deliveryDays(), fastestDelivery, slowestDelivery);
             double reliabilityScore = clamp0to100(c.reliability() * 100.0);
+            // Review score: average rating on a 0-5 scale mapped to 0-100.
+            // If a candidate has no reviews (rating 0), treat as neutral (60).
+            double reviewScore = c.rating() > 0 ? clamp0to100(c.rating() / 5.0 * 100.0) : 60.0;
 
             double total =
                     weights.price() * priceScore
                             + weights.featureMatch() * featureScore
                             + weights.warranty() * warrantyScore
                             + weights.delivery() * deliveryScore
-                            + weights.reliability() * reliabilityScore;
+                            + weights.reliability() * reliabilityScore
+                            + weights.reviews() * reviewScore;
 
             Map<String, Double> components = new LinkedHashMap<>();
             components.put("price", round(priceScore));
@@ -69,6 +73,7 @@ public class ScoringEngine {
             components.put("warranty", round(warrantyScore));
             components.put("delivery", round(deliveryScore));
             components.put("reliability", round(reliabilityScore));
+            components.put("reviews", round(reviewScore));
 
             scored.add(new ScoredCandidate(c, round(total), components));
         }
