@@ -1,0 +1,10 @@
+# Keep shell scripts and Docker build files LF so they run in Linux containers,
+# regardless of the committer's OS.
+*.sh        text eol=lf
+gradlew     text eol=lf
+Dockerfile  text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+
+# Let git handle normal text normalization for the rest.
+* text=auto

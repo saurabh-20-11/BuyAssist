@@ -1,0 +1,53 @@
+# Render Blueprint for BuyAssist — deploys both services from this repo.
+# In Render: New -> Blueprint -> pick this repo. Then set the secret env vars
+# (GEMINI_API_KEY, and optionally EBAY_* ) in each service's dashboard.
+#
+# Free tier note: services sleep after ~15 min idle; first request cold-starts
+# in ~30-60s. Fine for a portfolio link — open it a minute before demoing.
+
+services:
+  # --- Python AP2 service ---
+  - type: web
+    name: buyassist-ap2
+    runtime: docker
+    rootDir: ap2-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8081
+
+  # --- Java backend (serves the web console too) ---
+  - type: web
+    name: buyassist-backend
+    runtime: docker
+    rootDir: java-backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/procurement/products
+    envVars:
+      - key: PORT
+        value: 10000
+      # Point the backend at the AP2 service's internal URL. Render injects the
+      # host:port of the AP2 service; we prefix the scheme at use. On Render,
+      # services reach each other at http://<name>:<port> on the private network.
+      - key: AP2_SERVICE_URL
+        value: http://buyassist-ap2:8081
+      # Decision layer defaults.
+      - key: DECISION_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      # Catalog source: mock by default; set to "ebay" + add EBAY_* to go live.
+      - key: CATALOG_SOURCE
+        value: mock
+      # Secrets — set these in the Render dashboard, NOT here:
+      #   GEMINI_API_KEY   (required)
+      #   EBAY_CLIENT_ID / EBAY_CLIENT_SECRET (only if CATALOG_SOURCE=ebay)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
