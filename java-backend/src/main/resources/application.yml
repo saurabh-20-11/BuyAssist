@@ -36,6 +36,18 @@ jev:
 ap2:
   base-url: ${AP2_SERVICE_URL:http://localhost:8081}
 
+# Catalog source: "mock" (default, seeded data) or "ebay" (live Browse API).
+catalog:
+  source: ${CATALOG_SOURCE:mock}
+
+# eBay Browse API (server-side only). Used only when catalog.source=ebay.
+ebay:
+  client-id: ${EBAY_CLIENT_ID:}
+  client-secret: ${EBAY_CLIENT_SECRET:}
+  oauth-url: ${EBAY_OAUTH_URL:https://api.ebay.com}
+  browse-url: ${EBAY_BROWSE_URL:https://api.ebay.com/buy/browse/v1}
+  marketplace-id: ${EBAY_MARKETPLACE_ID:EBAY_US}
+
 # Deterministic scoring weights (must sum to 1.0).
 scoring:
   weights:

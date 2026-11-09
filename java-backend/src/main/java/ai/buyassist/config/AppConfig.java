@@ -1,6 +1,7 @@
 package ai.buyassist.config;
 
 import ai.buyassist.ap2.Ap2Properties;
+import ai.buyassist.ebay.EbayProperties;
 import ai.buyassist.gemini.GeminiProperties;
 import ai.buyassist.jev.JevProperties;
 import ai.buyassist.scoring.ScoringProperties;
@@ -14,7 +15,7 @@ import org.springframework.web.client.RestClient;
  */
 @Configuration
 @EnableConfigurationProperties({JevProperties.class, GeminiProperties.class,
-        ScoringProperties.class, Ap2Properties.class})
+        ScoringProperties.class, Ap2Properties.class, EbayProperties.class})
 public class AppConfig {
 
     @Bean
