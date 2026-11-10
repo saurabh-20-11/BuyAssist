@@ -23,8 +23,8 @@ soundness, groundedness, safety, and cost. For BuyAssist that maps to:
 | **Hard-constraint correctness** (budget, quantity, features, warranty) | Deterministic golden cases | `PolicyGateEvalTest` |
 | **Vendor ranking** (scoring rubric incl. reviews) | Deterministic expected order + component bounds | `ScoringEvalTest` |
 | **Autonomous safety / fail-safe** | Deterministic scenario assertions | `AutonomousFailSafeEvalTest` |
-| **Intent extraction** (speech → structured) | Field-match against a labeled dataset | *planned* |
-| **Semantic recommendation quality** | LLM-as-judge, grounded, caveated | *planned* |
+| **Intent extraction** (speech → structured) | Field-match against a labeled dataset (live, opt-in) | `IntentExtractionEvalTest` |
+| **Semantic recommendation quality** | LLM-as-judge, grounded, caveated (live, opt-in) | `RecommendationJudgeEvalTest` |
 | **Trajectory** (correct stage order) | Assert the audit timeline sequence | *partially via E2E* |
 
 ## Running the evals
@@ -35,7 +35,22 @@ $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot"
 .\gradlew.bat test --tests "ai.buyassist.evals.*"
 ```
 
-Current status: **18 tests, 0 failures** (10 policy + 4 scoring + 4 fail-safe).
+Current status: **18 deterministic tests, 0 failures** (10 policy + 4 scoring +
+4 fail-safe). These run offline on every build.
+
+The **live evals** (intent extraction + the LLM judge) are opt-in and run against
+a running backend:
+
+```powershell
+# start the backend first, then:
+.\gradlew.bat test --tests "ai.buyassist.evals.IntentExtractionEvalTest" `
+  --tests "ai.buyassist.evals.RecommendationJudgeEvalTest" "-Deval.live=true"
+```
+
+Without `-Deval.live=true` they **skip** (JUnit assumptions), so the default build
+stays deterministic and offline. If the model returns a transient 503 mid-run,
+individual cases skip rather than fail — a flaky free-tier API must never show up
+as a red test.
 
 ## The deterministic evals (the backbone)
 

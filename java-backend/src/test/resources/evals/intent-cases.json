@@ -1,0 +1,35 @@
+{
+  "description": "Labeled intent-extraction cases: a natural-language/spoken phrasing and the structured fields it should produce. Numbers are graded exactly; features as a case-insensitive set. These exercise the Gemini 'understand' layer end-to-end against the running backend; they skip gracefully if the model is unavailable (free-tier 503).",
+  "cases": [
+    {
+      "name": "canonical monitor request with word-number budget",
+      "transcript": "I need five 27 inch monitors for our analytics team, keep the total under twelve hundred dollars, they must have USB-C and at least a three year warranty",
+      "expect": { "quantity": 5, "budget": 1200, "sizeInches": 27, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 }
+    },
+    {
+      "name": "digits budget and features list",
+      "transcript": "buy 3 USB-C monitors with HDMI, budget 900, two year warranty minimum",
+      "expect": { "quantity": 3, "budget": 900, "requiredFeatures": ["USB-C", "HDMI"], "minimumWarrantyYears": 2 }
+    },
+    {
+      "name": "4K requirement and larger size",
+      "transcript": "get me two 32 inch 4K monitors under 800 dollars each is fine so up to 1600 total, USB-C required",
+      "expect": { "quantity": 2, "sizeInches": 32, "requiredFeatures": ["USB-C", "4K"] }
+    },
+    {
+      "name": "no explicit quantity defaults to one",
+      "transcript": "I want a 27 inch USB-C monitor with a 3 year warranty under 300 dollars",
+      "expect": { "quantity": 1, "sizeInches": 27, "budget": 300, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 }
+    },
+    {
+      "name": "ten units larger budget",
+      "transcript": "we need ten monitors, 27 inch, USB-C, total budget of two thousand five hundred, warranty at least 3 years",
+      "expect": { "quantity": 10, "sizeInches": 27, "budget": 2500, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 }
+    },
+    {
+      "name": "no feature requirement",
+      "transcript": "I just need four cheap 24 inch monitors under 600 dollars total",
+      "expect": { "quantity": 4, "sizeInches": 24, "budget": 600 }
+    }
+  ]
+}
