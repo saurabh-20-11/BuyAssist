@@ -1,5 +1,8 @@
 # BuyAssist
 
+**🔗 Live demo:** https://buyassist-backend.onrender.com
+*(Free-tier hosting — the first visit may take ~30–60s to wake the service.)*
+
 **A voice-first AI procurement agent** that turns spoken purchasing requests into
 constrained, auditable payment authorizations using Google's **Agent Payments
 Protocol (AP2)**. It deliberately separates four kinds of intelligence:
