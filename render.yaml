@@ -29,11 +29,10 @@ services:
     envVars:
       - key: PORT
         value: 10000
-      # Point the backend at the AP2 service's internal URL. Render injects the
-      # host:port of the AP2 service; we prefix the scheme at use. On Render,
-      # services reach each other at http://<name>:<port> on the private network.
+      # Point the backend at the AP2 service. Using the public HTTPS URL is the
+      # most reliable option on Render's free tier (private networking varies).
       - key: AP2_SERVICE_URL
-        value: http://buyassist-ap2:8081
+        value: https://buyassist-ap2.onrender.com
       # Decision layer defaults.
       - key: DECISION_PROVIDER
         value: gemini
