@@ -1,0 +1,71 @@
+{
+  "description": "Golden policy-gate cases. Each case states an intent and a candidate, and the exact expected pass/fail per hard constraint. These are deterministically checkable — any mismatch is a real bug, no AI judge involved.",
+  "cases": [
+    {
+      "name": "all pass: within budget, qty ok, USB-C present, warranty ok",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 1200, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Dell", "merchant": "TechMart", "unitPrice": 219, "quantity": 5, "warrantyYears": 3, "deliveryDays": 2, "features": ["USB-C", "HDMI"], "reliability": 0.95 },
+      "expectValid": true
+    },
+    {
+      "name": "fail budget: total exceeds budget",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 900, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Dell", "merchant": "TechMart", "unitPrice": 219, "quantity": 5, "warrantyYears": 3, "deliveryDays": 2, "features": ["USB-C"], "reliability": 0.95 },
+      "expectValid": false,
+      "expectFailed": ["budget"]
+    },
+    {
+      "name": "fail warranty: 1yr below 3yr floor",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 1200, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Lenovo", "merchant": "BusinessDirect", "unitPrice": 205, "quantity": 5, "warrantyYears": 1, "deliveryDays": 1, "features": ["USB-C"], "reliability": 0.88 },
+      "expectValid": false,
+      "expectFailed": ["warranty"]
+    },
+    {
+      "name": "fail feature: USB-C required but missing",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 1200, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 2 },
+      "candidate": { "name": "AOC", "merchant": "TechMart", "unitPrice": 129, "quantity": 5, "warrantyYears": 2, "deliveryDays": 2, "features": ["HDMI"], "reliability": 0.82 },
+      "expectValid": false,
+      "expectFailed": ["USB-C"]
+    },
+    {
+      "name": "fail quantity: offer covers fewer units than requested",
+      "intent": { "product": "27 inch monitor", "quantity": 10, "budget": 5000, "requiredFeatures": [], "minimumWarrantyYears": 0 },
+      "candidate": { "name": "HP", "merchant": "OfficeHub", "unitPrice": 229, "quantity": 5, "warrantyYears": 3, "deliveryDays": 3, "features": ["USB-C"], "reliability": 0.90 },
+      "expectValid": false,
+      "expectFailed": ["quantity"]
+    },
+    {
+      "name": "multi-fail: over budget AND warranty too low",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 500, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Lenovo", "merchant": "BusinessDirect", "unitPrice": 205, "quantity": 5, "warrantyYears": 1, "deliveryDays": 1, "features": ["USB-C"], "reliability": 0.88 },
+      "expectValid": false,
+      "expectFailed": ["budget", "warranty"]
+    },
+    {
+      "name": "no constraints: anything valid when no hard rules set",
+      "intent": { "product": "monitor", "quantity": 1, "budget": 100000, "requiredFeatures": [], "minimumWarrantyYears": 0 },
+      "candidate": { "name": "AOC", "merchant": "TechMart", "unitPrice": 129, "quantity": 1, "warrantyYears": 1, "deliveryDays": 2, "features": [], "reliability": 0.82 },
+      "expectValid": true
+    },
+    {
+      "name": "multiple required features: all present",
+      "intent": { "product": "27 inch monitor", "quantity": 2, "budget": 1000, "requiredFeatures": ["USB-C", "HDMI"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Dell", "merchant": "TechMart", "unitPrice": 219, "quantity": 2, "warrantyYears": 3, "deliveryDays": 2, "features": ["USB-C", "HDMI", "IPS"], "reliability": 0.95 },
+      "expectValid": true
+    },
+    {
+      "name": "multiple required features: one missing",
+      "intent": { "product": "27 inch monitor", "quantity": 2, "budget": 1000, "requiredFeatures": ["USB-C", "4K"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Dell", "merchant": "TechMart", "unitPrice": 219, "quantity": 2, "warrantyYears": 3, "deliveryDays": 2, "features": ["USB-C", "HDMI"], "reliability": 0.95 },
+      "expectValid": false,
+      "expectFailed": ["4K"]
+    },
+    {
+      "name": "budget exactly equal to total: passes (<=)",
+      "intent": { "product": "27 inch monitor", "quantity": 5, "budget": 1095, "requiredFeatures": ["USB-C"], "minimumWarrantyYears": 3 },
+      "candidate": { "name": "Dell", "merchant": "TechMart", "unitPrice": 219, "quantity": 5, "warrantyYears": 3, "deliveryDays": 2, "features": ["USB-C"], "reliability": 0.95 },
+      "expectValid": true
+    }
+  ]
+}

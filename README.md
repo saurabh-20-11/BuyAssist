@@ -34,6 +34,14 @@ Full detail in [`docs/architecture/`](docs/architecture/):
 - [`ap2-flow.md`](docs/architecture/ap2-flow.md) — human-present and autonomous flows
 - [`components.md`](docs/architecture/components.md) — monorepo layout and responsibilities
 
+## Evaluation
+
+The system is measured with a deterministic-first eval suite (18 tests): the hard
+constraint gate, the scoring rubric, and the autonomous **fail-safe** (the AI can
+block or clear a purchase, never cause one) are graded in code; LLM-as-judge is
+reserved only for subjective quality and reported with honest caveats. See
+[`docs/evals.md`](docs/evals.md). Run: `./gradlew test --tests "ai.buyassist.evals.*"`.
+
 ## Repository layout
 
 ```
